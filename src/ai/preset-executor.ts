@@ -130,7 +130,13 @@ function nearestMonster(
 function canCastNow(self: Character, skillId: SkillId, tick: number): boolean {
   if (self.casting) return false;
   if (tick < self.castFinishAt) return false;        // still in after-cast delay
-  const sp = SKILLS[skillId]?.spCost[0] ?? 0;
+  const def = SKILLS[skillId];
+  if (!def) return false;
+  const level = self.skills[skillId] ?? 0;
+  if (level === 0) return false;                     // not learned
+  // Use the SP cost of the CURRENT learned level — not level 1.
+  // (e.g. Improve Concentration at lv5 costs 16 SP, not 8.)
+  const sp = def.spCost[level - 1] ?? 0;
   if (self.sp < sp) return false;
   return true;
 }
