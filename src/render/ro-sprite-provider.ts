@@ -1,46 +1,53 @@
 /**
- * Real-Ragnarok-Online sprite provider.
+ * Real-Ragnarok-Online sprite provider backed by ragassets.
  *
- * Reads mob spritesheets from /public/sprites/mobs/*.png (downloaded from
- * divine-pride.net) and renders the correct frame based on the current
- * animation tick. For non-mob layers (player body, hair, hat, weapon,
- * garment) it falls back to PlaceholderSpriteProvider.
+ * URL is computed per (layerKey, animation, facing, frame) via
+ * `buildAssetUrl`. The provider keeps an in-memory cache of decoded
+ * HTMLImageElements keyed by URL so each unique sprite is fetched once.
+ *
+ * If ragassets fails for a URL we fall back to:
+ *   1. the local PNG manifest (`ro-mob-manifest`) — for the five starter
+ *      monsters we ship offline copies.
+ *   2. PlaceholderSpriteProvider — for layers we have no asset for at all
+ *      (custom weapon layers, hats, etc.).
  */
 
 import type { SpriteAnimation } from '@engine/types';
 import type { SpriteProvider, SpriteFrame } from './sprites';
 import { PlaceholderSpriteProvider } from './sprites';
+import { buildAssetUrl } from './ro-asset-url';
 import { RO_MOB_MANIFEST, type MobSpriteDef } from './ro-mob-manifest';
 
-/**
- * Target on-canvas frame size for mob rendering. Source frames are scaled
- * (aspect-preserved) to fit within FRAME_W × FRAME_H, anchored to the
- * bottom-centre so the mob "stands" on the ground line.
- */
 const FRAME_W = 64;
 const FRAME_H = 80;
+/** Delay between animation frames (ms). */
+const FRAME_DELAY_MS = 150;
 
 export class RospriteProvider implements SpriteProvider {
-  private images = new Map<string, HTMLImageElement>();
-  private loaded = new Set<string>();
+  /** URL → HTMLImageElement. */
+  private cache = new Map<string, HTMLImageElement>();
+  /** URLs known to have failed (404 / network) — skip future fetches. */
+  private failed = new Set<string>();
+  /** Local PNG fallback images, keyed by mob SpriteKey. */
+  private localImages = new Map<string, HTMLImageElement>();
+  private localLoaded = new Set<string>();
   private placeholder = new PlaceholderSpriteProvider();
 
   constructor() {
-    for (const [key, def] of Object.entries(RO_MOB_MANIFEST)) {
-      this.preload(key, def);
+    // Preload local PNG fallbacks for the 5 starter mobs.
+    for (const key of Object.keys(RO_MOB_MANIFEST)) {
+      const def: MobSpriteDef = RO_MOB_MANIFEST[key]!;
+      const img = new Image();
+      img.onload = () => { this.localLoaded.add(key); };
+      img.src = def.src;
+      this.localImages.set(key, img);
     }
   }
 
-  private preload(key: string, def: MobSpriteDef): void {
-    const img = new Image();
-    img.onload = () => { this.loaded.add(key); };
-    img.onerror = () => console.warn(`Failed to load RO sprite: ${def.src}`);
-    img.src = def.src;
-    this.images.set(key, img);
-  }
-
   has(layerKey: string): boolean {
-    return layerKey in RO_MOB_MANIFEST || this.placeholder.has(layerKey);
+    return layerKey in RO_MOB_MANIFEST
+      || buildAssetUrl(layerKey, 'idle', 'right', 0) !== null
+      || this.placeholder.has(layerKey);
   }
 
   get(
@@ -49,37 +56,54 @@ export class RospriteProvider implements SpriteProvider {
     facing: 'left' | 'right',
     frame: number,
   ): SpriteFrame {
-    const def = RO_MOB_MANIFEST[layerKey];
-    if (def && this.loaded.has(layerKey)) {
-      const img = this.images.get(layerKey)!;
-      // `frame` is actually a sim-tick value in ms (see composite.ts).
-      // Cycle through the manifest's frames at the manifest's delay.
-      const animFrame = def.frames.length > 1
-        ? Math.floor(frame / def.frameDelayMs) % def.frames.length
-        : 0;
-      // Suppress death-animation cycle unless the entity is actually dying
-      // (heuristic: only Savage uses multi-frame for now and only the
-      // standing frame should cycle when alive — so cap at frame 0 unless
-      // animation is 'dead' or 'hurt').
-      let frameIdx = animFrame;
-      if (def.frames.length > 1 && anim !== 'dead' && anim !== 'hurt') {
-        frameIdx = 0;  // alive → just the standing frame
-      } else if (def.frames.length > 1 && anim === 'dead') {
-        // death animation → play frames in order, frozen on last
-        frameIdx = Math.min(def.frames.length - 1, Math.floor(frame / def.frameDelayMs));
+    // 1. Try ragassets first.
+    const url = buildAssetUrl(layerKey, anim, facing, frame);
+    if (url) {
+      const img = this.getOrFetch(url);
+      if (img && img.complete && img.naturalWidth > 0) {
+        return this.buildFitFrame(img);
       }
-      const src = def.frames[frameIdx]!;
-      return this.buildFrame(img, src, anim);
     }
+
+    // 2. Try local PNG fallback (for the 5 starter mobs).
+    const def = RO_MOB_MANIFEST[layerKey];
+    if (def && this.localLoaded.has(layerKey)) {
+      const img = this.localImages.get(layerKey)!;
+      const frameIdx = Math.max(0, Math.floor(frame / FRAME_DELAY_MS)) % def.frames.length;
+      const src = def.frames[frameIdx]!;
+      return this.buildFitFrame(img, src.sx, src.sy, src.sw, src.sh);
+    }
+
+    // 3. Fall back to placeholder shapes.
     return this.placeholder.get(layerKey, anim, facing, frame);
   }
 
-  private buildFrame(
+  /** Return cached image, or kick off async fetch (returns null until loaded). */
+  private getOrFetch(url: string): HTMLImageElement | null {
+    if (this.failed.has(url)) return null;
+    const existing = this.cache.get(url);
+    if (existing) return existing;
+
+    const img = new Image();
+    img.onload = () => { /* will be picked up next frame */ };
+    img.onerror = () => {
+      this.failed.add(url);
+      this.cache.delete(url);
+    };
+    img.src = url;
+    this.cache.set(url, img);
+    return img;
+  }
+
+  /**
+   * Scale the (sub-)image into the FRAME_W × FRAME_H target, anchored to
+   * bottom-centre. Aspect-preserved.
+   */
+  private buildFitFrame(
     img: HTMLImageElement,
-    src: { sx: number; sy: number; sw: number; sh: number },
-    _anim: SpriteAnimation,
+    sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight,
   ): SpriteFrame {
-    const aspect = src.sw / src.sh;
+    const aspect = sw / sh;
     let dstW = FRAME_W;
     let dstH = FRAME_H;
     if (aspect > FRAME_W / FRAME_H) {
@@ -94,7 +118,7 @@ export class RospriteProvider implements SpriteProvider {
       draw: (ctx) => {
         ctx.drawImage(
           img,
-          src.sx, src.sy, src.sw, src.sh,
+          sx, sy, sw, sh,
           (FRAME_W - dstW) / 2, FRAME_H - dstH, dstW, dstH,
         );
       },
