@@ -36,7 +36,9 @@ export function drawComposite(
   cyBottom: number,
   opts: DrawOpts,
 ): void {
-  const frame = Math.floor(opts.tick / 200) % 4;
+  // Pass `tick` as the frame index — providers that don't animate ignore it,
+  // providers that do (RospriteProvider) compute their own frame index from it.
+  const frame = Math.max(0, Math.floor(opts.tick));
 
   ctx.save();
   ctx.globalAlpha = opts.alpha ?? 1;
