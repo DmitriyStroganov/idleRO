@@ -14,7 +14,7 @@ import './style.css';
 import './ui/ui.css';
 
 import { CanvasRenderer } from '@render/canvas';
-import { PlaceholderSpriteProvider } from '@render/sprites';
+import { RospriteProvider } from '@render/ro-sprite-provider';
 import { Ui } from './ui/state';
 import { renderLogin, type LoginActions } from './ui/login-screen';
 import { renderTown } from './ui/town';
@@ -41,7 +41,7 @@ const uiLayer = document.createElement('div');
 uiLayer.id = 'ui-layer';
 document.body.appendChild(uiLayer);
 
-const sprites = new PlaceholderSpriteProvider();
+const sprites = new RospriteProvider();
 const renderer = new CanvasRenderer(canvas, sprites);
 window.addEventListener('resize', () => renderer.resize());
 
