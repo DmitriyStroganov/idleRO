@@ -11,6 +11,7 @@ import { el, clear, button, fmtNum } from './dom';
 import { attemptRefine } from '@engine/character-ops';
 import { refineSuccessRate, refineZenyCost, refineMaterial } from '@engine/formulas/refine';
 import { ITEMS } from '@data/items';
+import { getItemIconSrc } from '@data/item-icons';
 import type { ArmorSlot, Character, EquipmentInstance } from '@engine/types';
 import { nextFloat } from '@engine/rng';
 
@@ -78,6 +79,7 @@ function refineRow(
 
   return el('div', { class: 'refine-row' }, [
     el('div', { class: 'refine-name' }, [
+      makeIcon(inst.itemId),
       el('span', { class: 'refine-plus', text: current > 0 ? `+${current}` : '—' }),
       el('span', { class: 'refine-item', text: def.name }),
       el('span', { class: 'refine-where', text: where }),
@@ -122,6 +124,18 @@ function globalRng(): { lo: number; hi: number } {
   s.lo = s.hi;
   s.hi = (s.lo ^ s.hi ^ x) >>> 0;
   return s;
+}
+
+/** Build a small icon element for an item — real PNG if available, else nothing. */
+function makeIcon(itemId: string): HTMLElement {
+  const src = getItemIconSrc(itemId as any);
+  if (src) {
+    const img = el('img', { class: 'inv-icon' }) as HTMLImageElement;
+    img.src = src;
+    img.alt = '';
+    return img;
+  }
+  return el('span', { class: 'inv-icon' });
 }
 
 function toast(msg: string, kind: 'success' | 'warning' | 'danger' = 'warning'): void {

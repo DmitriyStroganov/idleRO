@@ -15,6 +15,7 @@ import type { Ui } from './state';
 import { el, clear, button, fmtNum } from './dom';
 import { equipItem, unequipItem } from '@engine/character-ops';
 import { ITEMS } from '@data/items';
+import { getItemIconSrc } from '@data/item-icons';
 import type { ArmorSlot, Character } from '@engine/types';
 
 const EQUIP_SLOTS: { slot: ArmorSlot; label: string }[] = [
@@ -74,8 +75,29 @@ function dollRow(player: Character, slot: ArmorSlot, label: string, onChange: ()
   const cardSummary = inst && inst.cards.filter(Boolean).length > 0
     ? ` [${inst.cards.filter(Boolean).map((c) => c).join(',')}]`
     : '';
+
+  // Icon: try the real RO icon, fall back to type emoji on error.
+  let iconEl: HTMLElement;
+  if (def && def.spriteKey) {
+    const src = getItemIconSrc(inst!.itemId);
+    if (src) {
+      const img = el('img', { class: 'doll-icon' }) as HTMLImageElement;
+      img.src = src;
+      img.alt = '';
+      img.addEventListener('error', () => {
+        img.replaceWith(el('span', { class: 'doll-icon-fallback', text: iconForType(def.type) }));
+      });
+      iconEl = img;
+    } else {
+      iconEl = el('span', { class: 'doll-icon-fallback', text: iconForType(def.type) });
+    }
+  } else {
+    iconEl = el('span', { class: 'doll-icon-fallback doll-icon-empty', text: '—' });
+  }
+
   return el('div', { class: 'doll-row' }, [
     el('div', { class: 'doll-label', text: label }),
+    iconEl,
     el('div', { class: 'doll-value' }, [
       el('span', {
         class: 'doll-name' + (inst ? '' : ' doll-empty'),
@@ -103,9 +125,24 @@ function invRow(player: Character, entry: Character['inventory'][number], onChan
   const slotsTag = def.slots > 0 ? ` [${def.slots}]` : '';
   const countTag = entry.count > 1 ? ` ×${entry.count}` : '';
 
+  // Build icon: real PNG if available, otherwise type emoji.
+  let iconEl: HTMLElement;
+  const src = getItemIconSrc(entry.itemId);
+  if (src) {
+    const img = el('img', { class: 'inv-icon' }) as HTMLImageElement;
+    img.src = src;
+    img.alt = '';
+    img.addEventListener('error', () => {
+      img.replaceWith(el('span', { class: `inv-icon inv-icon-fallback inv-type-${def.type}`, text: iconForType(def.type) }));
+    });
+    iconEl = img;
+  } else {
+    iconEl = el('span', { class: `inv-icon inv-icon-fallback inv-type-${def.type}`, text: iconForType(def.type) });
+  }
+
   return el('div', { class: 'inv-row' }, [
     el('div', { class: 'inv-name' }, [
-      el('span', { class: `inv-icon inv-type-${def.type}`, text: iconForType(def.type) }),
+      iconEl,
       el('span', {
         class: 'inv-label',
         text: `${def.name}${refineTag}${slotsTag}${countTag}`,

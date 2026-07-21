@@ -10,6 +10,7 @@ import type { Ui } from './state';
 import { el, clear, button } from './dom';
 import { socketCard, removeCard } from '@engine/character-ops';
 import { ITEMS, CARDS } from '@data/items';
+import { getItemIconSrc } from '@data/item-icons';
 import type { ArmorSlot, CardId, Character, EquipmentInstance } from '@engine/types';
 
 export function renderCardSocket(root: HTMLElement, ui: Ui): void {
@@ -81,9 +82,24 @@ function cardRow(
     slotPips.appendChild(pip);
   }
   return el('div', { class: 'card-equip-row' }, [
-    el('div', { class: 'card-equip-name', text: `${def.name}  (${where})` }),
+    el('div', { class: 'card-equip-name' }, [
+      makeIcon(inst.itemId),
+      el('span', { text: `${def.name}  (${where})` }),
+    ]),
     slotPips,
   ]);
+}
+
+/** Build a small icon element for an equipment piece. */
+function makeIcon(itemId: string): HTMLElement {
+  const src = getItemIconSrc(itemId as Parameters<typeof getItemIconSrc>[0]);
+  if (src) {
+    const img = el('img', { class: 'inv-icon' }) as HTMLImageElement;
+    img.src = src;
+    img.alt = '';
+    return img;
+  }
+  return el('span', { class: 'inv-icon' });
 }
 
 function openCardPicker(player: Character, itemUid: string, onChange: () => void): void {
@@ -114,8 +130,13 @@ function openCardPicker(player: Character, itemUid: string, onChange: () => void
         onChange();
       },
     }, [
-      el('div', { class: 'cpi-name', text: card.name }),
-      el('div', { class: 'cpi-desc', text: describeBonus(card) }),
+      el('div', { class: 'cpi-row' }, [
+        makeIcon(card.id),
+        el('div', { class: 'cpi-text' }, [
+          el('div', { class: 'cpi-name', text: card.name }),
+          el('div', { class: 'cpi-desc', text: describeBonus(card) }),
+        ]),
+      ]),
     ]));
   }
   list.appendChild(button('Cancel', () => overlay.remove()));

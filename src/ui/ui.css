@@ -373,6 +373,7 @@
   font-size: 12px;
   color: #95a5a6;
   min-width: 90px;
+  flex-shrink: 0;
 }
 
 .doll-value {
@@ -424,7 +425,45 @@
 }
 
 .inv-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+  image-rendering: pixelated;        /* RO icons are tiny — keep crisp */
+  image-rendering: -moz-crisp-edges;
+}
+
+/* emoji fallback when no PNG */
+.inv-icon-fallback {
   font-size: 16px;
+  text-align: center;
+  line-height: 24px;
+}
+
+/* doll-icon: same look but slightly bigger */
+.doll-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  flex-shrink: 0;
+}
+
+.doll-icon-fallback {
+  font-size: 18px;
+  text-align: center;
+  line-height: 28px;
+  width: 28px;
+}
+
+.doll-icon-empty {
+  color: #7f8c8d;
+  font-style: italic;
+  font-size: 14px;
 }
 
 .inv-stats {
@@ -634,6 +673,16 @@
   font-size: 11px;
   color: #95a5a6;
   margin-top: 2px;
+}
+
+.cpi-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.cpi-text {
+  flex: 1;
 }
 
 /* Settings / saves */
