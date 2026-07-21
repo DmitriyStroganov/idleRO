@@ -85,6 +85,10 @@ export class RospriteProvider implements SpriteProvider {
     if (existing) return existing;
 
     const img = new Image();
+    // ragassets serves `Access-Control-Allow-Origin: *` — set crossOrigin
+    // so the canvas stays untainted and we can read pixels back later
+    // (post-processing, fog, color grading, screenshots).
+    img.crossOrigin = 'anonymous';
     img.onload = () => { /* will be picked up next frame */ };
     img.onerror = () => {
       this.failed.add(url);

@@ -43,46 +43,61 @@ export function drawComposite(
   ctx.save();
   ctx.globalAlpha = opts.alpha ?? 1;
 
-  // Mirror if facing left.
-  if (opts.facing === 'left') {
+  const L = appearance.layers;
+
+  // Mirror if facing left — but ONLY for placeholder / non-RO layers.
+  // ragassets sprites are already pre-oriented via the `direction` parameter
+  // in the URL (2 = W / facing left, 6 = E / facing right), so flipping
+  // them again would double-mirror and end up wrong.
+  const isRoSprite = L.body.startsWith('Body_') || L.body.startsWith('Sprite_');
+  if (opts.facing === 'left' && !isRoSprite) {
     ctx.translate(cx, 0);
     ctx.scale(-1, 1);
     ctx.translate(-cx, 0);
   }
 
-  const L = appearance.layers;
+  // If the body is a "real" composite sprite (a RO class sprite from
+  // ragassets), the body already includes hair, head, and posture — the
+  // individual layer keys we have (hair / headTop / weapon / garment /
+  // shield) are PLACEHOLDER shapes, and drawing them on top of a real
+  // RO body would look like geometric stickers on a portrait.
+  //
+  // Until the equipment-layer URL plumbing (passing weapon=/headgear=
+  // query params to ragassets) lands, we render ONLY the body for these
+  // sprites. The placeholder layers continue to work for non-RO bodies
+  // (debug shapes, future custom classes).
+  const isCompositeRoBody = L.body.startsWith('Body_');
 
   // Robe first (covers body) — if present.
   if (L.robe) drawLayer(ctx, spriteProvider, L.robe, cx, cyBottom, opts, frame);
 
-  // Garment (cape) behind body.
-  if (L.garment) drawLayer(ctx, spriteProvider, L.garment, cx, cyBottom, opts, frame);
-
-  // Body
-  drawLayer(ctx, spriteProvider, L.body, cx, cyBottom, opts, frame);
-
-  // Armor (overrides torso colour).
-  if (L.body && L.body.startsWith('Body_') && !L.robe) {
-    // skip if armor layer is absent (skin shows through)
+  if (!isCompositeRoBody) {
+    // Garment (cape) behind body.
+    if (L.garment) drawLayer(ctx, spriteProvider, L.garment, cx, cyBottom, opts, frame);
   }
 
-  // Shield (left hand — back when facing right).
-  if (L.shield) drawLayer(ctx, spriteProvider, L.shield, cx, cyBottom, opts, frame);
+  // Body (always drawn — this is the actual character sprite)
+  drawLayer(ctx, spriteProvider, L.body, cx, cyBottom, opts, frame);
 
-  // Head-low (beard, mask)
-  if (L.headLow) drawLayer(ctx, spriteProvider, L.headLow, cx, cyBottom, opts, frame);
+  if (!isCompositeRoBody) {
+    // Shield (left hand — back when facing right).
+    if (L.shield) drawLayer(ctx, spriteProvider, L.shield, cx, cyBottom, opts, frame);
 
-  // Head-mid (glasses)
-  if (L.headMid) drawLayer(ctx, spriteProvider, L.headMid, cx, cyBottom, opts, frame);
+    // Head-low (beard, mask)
+    if (L.headLow) drawLayer(ctx, spriteProvider, L.headLow, cx, cyBottom, opts, frame);
 
-  // Hair
-  if (L.hair) drawLayer(ctx, spriteProvider, L.hair, cx, cyBottom, opts, frame);
+    // Head-mid (glasses)
+    if (L.headMid) drawLayer(ctx, spriteProvider, L.headMid, cx, cyBottom, opts, frame);
 
-  // Head-top (hat)
-  if (L.headTop) drawLayer(ctx, spriteProvider, L.headTop, cx, cyBottom, opts, frame);
+    // Hair
+    if (L.hair) drawLayer(ctx, spriteProvider, L.hair, cx, cyBottom, opts, frame);
 
-  // Weapon (front)
-  if (L.weapon) drawLayer(ctx, spriteProvider, L.weapon, cx, cyBottom, opts, frame);
+    // Head-top (hat)
+    if (L.headTop) drawLayer(ctx, spriteProvider, L.headTop, cx, cyBottom, opts, frame);
+
+    // Weapon (front)
+    if (L.weapon) drawLayer(ctx, spriteProvider, L.weapon, cx, cyBottom, opts, frame);
+  }
 
   ctx.restore();
 }
