@@ -15,8 +15,10 @@ export type ScreenId =
   | 'skills'        // skill tree
   | 'inventory'     // inventory + equipment
   | 'classchange'   // class-change NPC
-  | 'refine'        // (Stage 9) refine NPC
-  | 'settings';
+  | 'refine'        // blacksmith NPC
+  | 'cards'         // card socketing NPC
+  | 'settings'      // save/load
+  | 'battlelog';
 
 export interface UiState {
   screen: ScreenId;

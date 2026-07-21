@@ -8,6 +8,7 @@
 
 import type {
   ArmorSlot,
+  CardId,
   Character,
   EquipmentInstance,
   InventoryEntry,
@@ -21,6 +22,12 @@ import { JOBS, JOB_CHANGE_REQUIREMENTS } from '@data/jobs';
 import { SKILLS } from '@data/skills';
 import { recomputeCharacterStats } from '@engine/sim';
 import { statPointCost } from '@engine/formulas/stats';
+import {
+  refineSuccessRate,
+  refineZenyCost,
+  refineMaterial,
+  type ItemRef,
+} from '@engine/formulas/refine';
 
 export type OpResult =
   | { ok: true }
@@ -218,6 +225,160 @@ export function changeJob(c: Character, to: JobId): OpResult {
   c.hp = c.maxHp;
   c.sp = c.maxSp;
   return ok();
+}
+
+// ============================================================================
+// Refinement (Hollgrehenn-style NPC)
+// ============================================================================
+
+export interface RefineAttemptInput {
+  itemUid: string;
+  /** Caller-provided RNG roll in [0,1). Engine itself stays deterministic. */
+  roll: number;
+}
+
+export interface RefineAttemptResult {
+  ok: boolean;
+  reason?: string;
+  newRefine: number;
+  broke: boolean;
+  cost?: { zeny: number; material: ItemRef };
+}
+
+/**
+ * Attempt to refine the equipped or inventory item by one level.
+ * Pre-Renewal: at +5+ weapons can break (refine -1 then vanish on next fail),
+ * armor just vanishes. We simplify to "broke" = item destroyed.
+ */
+export function attemptRefine(c: Character, input: RefineAttemptInput): RefineAttemptResult {
+  const { itemUid, roll } = input;
+  const loc = findEquipmentInstance(c, itemUid);
+  if (!loc) return failRefine('Item not found');
+  const def = ITEMS[loc.instance.itemId];
+  if (!def || !def.refineable) return failRefine('Item is not refineable');
+  const current = loc.instance.refine;
+  if (current >= (def.maxRefine ?? 10)) return failRefine('Already at maximum refine', current);
+
+  const kind: 'weapon' | 'armor' = def.type === 'weapon' ? 'weapon' : 'armor';
+  const wl = def.weaponLevel ?? 1;
+  const rate = refineSuccessRate(current, kind, wl);
+  const zeny = refineZenyCost(current, kind, wl);
+  const material = refineMaterial(kind, wl);
+
+  if (c.zeny < zeny) return failRefine(`Need ${zeny} zeny`, current);
+  const hasMat = c.inventory.some(
+    (e) => e.itemId === ('Item_' + material) && e.count > 0,
+  );
+  if (!hasMat) return failRefine(`Need 1 ${material}`, current);
+
+  // Charge
+  c.zeny -= zeny;
+  consumeItem(c, 'Item_' + material, 1);
+
+  if (roll < rate) {
+    loc.instance.refine = current + 1;
+    if (loc.kind === 'equip') recomputeCharacterStats(c);
+    return { ok: true, newRefine: current + 1, broke: false, cost: { zeny, material } };
+  }
+
+  // Failure
+  if (current < 4) {
+    // Safe — no penalty (shouldn't happen since rates are 100% below +4).
+    return { ok: false, newRefine: current, broke: false, cost: { zeny, material } };
+  }
+  // Item breaks / vanishes.
+  destroyEquipmentInstance(c, loc);
+  return { ok: false, newRefine: 0, broke: true, cost: { zeny, material } };
+}
+
+function findEquipmentInstance(
+  c: Character,
+  uid: string,
+): { kind: 'equip' | 'inv'; slot?: ArmorSlot; instance: EquipmentInstance } | null {
+  for (const slot of Object.keys(c.equipment) as ArmorSlot[]) {
+    const inst = c.equipment[slot];
+    if (inst && inst.uid === uid) {
+      return { kind: 'equip', slot, instance: inst };
+    }
+  }
+  for (const entry of c.inventory) {
+    if (entry.instance && entry.instance.uid === uid) {
+      return { kind: 'inv', instance: entry.instance };
+    }
+  }
+  return null;
+}
+
+function destroyEquipmentInstance(
+  c: Character,
+  loc: { kind: 'equip' | 'inv'; slot?: ArmorSlot; instance: EquipmentInstance },
+): void {
+  if (loc.kind === 'equip' && loc.slot) {
+    delete c.equipment[loc.slot];
+  } else {
+    c.inventory = c.inventory.filter((e) => e.instance !== loc.instance);
+  }
+}
+
+function consumeItem(c: Character, itemId: ItemId, count: number): void {
+  const entry = c.inventory.find((e) => e.itemId === itemId);
+  if (!entry) return;
+  entry.count -= count;
+  if (entry.count <= 0) {
+    c.inventory = c.inventory.filter((e) => e !== entry);
+  }
+}
+
+function failRefine(reason: string, newRefine = 0): RefineAttemptResult {
+  return { ok: false, reason, newRefine, broke: false };
+}
+
+// ============================================================================
+// Card socketing
+// ============================================================================
+
+export interface SocketCardResult {
+  ok: boolean;
+  reason?: string;
+}
+
+/** Insert a card into an empty slot of an equipment instance. */
+export function socketCard(c: Character, itemUid: string, cardId: CardId): SocketCardResult {
+  const loc = findEquipmentInstance(c, itemUid);
+  if (!loc) return { ok: false, reason: 'Item not found' };
+  const def = ITEMS[loc.instance.itemId];
+  if (!def) return { ok: false, reason: 'Unknown item' };
+  if (loc.instance.cards.filter(Boolean).length >= def.slots) {
+    return { ok: false, reason: 'All slots full' };
+  }
+  // Remove the card from inventory.
+  const cardEntry = c.inventory.find((e) => e.itemId === cardId);
+  if (!cardEntry || cardEntry.count <= 0) {
+    return { ok: false, reason: 'Card not in inventory' };
+  }
+  // Equip block? Validate slot kind matches the card's intended slot.
+  // (We trust the UI to filter; classic RO is strict but we keep it loose.)
+  const emptyIdx = loc.instance.cards.findIndex((s) => !s);
+  if (emptyIdx < 0) return { ok: false, reason: 'No empty slot' };
+  loc.instance.cards[emptyIdx] = cardId;
+  consumeItem(c, cardId, 1);
+  if (loc.kind === 'equip') recomputeCharacterStats(c);
+  return { ok: true };
+}
+
+/** Remove a card from an equipment instance (no failure in classic, but costs zeny). */
+export function removeCard(c: Character, itemUid: string, slotIdx: number): SocketCardResult {
+  const loc = findEquipmentInstance(c, itemUid);
+  if (!loc) return { ok: false, reason: 'Item not found' };
+  const card = loc.instance.cards[slotIdx];
+  if (!card) return { ok: false, reason: 'No card in that slot' };
+  loc.instance.cards[slotIdx] = null as unknown as CardId;
+  // Add card back to inventory.
+  const existing = c.inventory.find((e) => e.itemId === card);
+  if (existing) existing.count += 1;
+  else c.inventory.push({ uid: `card-${Date.now()}`, itemId: card, count: 1 });
+  if (loc.kind === 'equip') recomputeCharacterStats(c);
+  return { ok: true };
 }
 
 // ============================================================================

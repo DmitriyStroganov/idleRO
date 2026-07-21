@@ -22,6 +22,17 @@ import { renderStats } from './ui/stats-panel';
 import { renderSkills } from './ui/skills-panel';
 import { renderInventory } from './ui/inventory-panel';
 import { renderClassChange } from './ui/classchange-panel';
+import { renderRefine } from './ui/refine-panel';
+import { renderCardSocket } from './ui/card-panel';
+import { renderSettings, type SaveActions } from './ui/settings-panel';
+import {
+  saveGame,
+  loadGame,
+  deleteSave,
+  loadSettings,
+  saveSettings,
+  type Settings,
+} from '@persistence/save';
 
 // ============================================================================
 // Boot
@@ -186,10 +197,69 @@ function renderScreens(state: Ui['state']): void {
     case 'skills':      renderSkills(uiLayer, ui); break;
     case 'inventory':   renderInventory(uiLayer, ui); break;
     case 'classchange': renderClassChange(uiLayer, ui); break;
+    case 'refine':      renderRefine(uiLayer, ui); break;
+    case 'cards':       renderCardSocket(uiLayer, ui); break;
+    case 'settings':    renderSettings(uiLayer, ui, settingsActions, settings); break;
     default: break;
   }
 }
+
+const settings: Settings = loadSettings();
+
+const settingsActions: SaveActions = {
+  saveToSlot: (slot: string) => {
+    saveGame(slot, player, world, currentPresetId);
+    flash(`Saved to ${slot}`);
+    ui.refresh();
+  },
+  loadFromSlot: (slot: string) => {
+    const data = loadGame(slot);
+    // Mutate live player/world in place so existing references stay valid.
+    Object.assign(player, data.character);
+    // World is replaced wholesale — also need to keep `player` reference.
+    data.world.players[0] = player;
+    Object.assign(world, data.world);
+    currentPresetId = data.presetId as keyof typeof PRESETS;
+    strategies.set(player.uid, presetStrategy(PRESETS[currentPresetId]));
+    ui.go('battle');
+    flash(`Loaded ${data.name}`);
+  },
+  updateSettings: (s: Settings) => {
+    Object.assign(settings, s);
+    saveSettings(s);
+  },
+  resetGame: () => {
+    for (const s of ['slot1', 'slot2', 'slot3']) deleteSave(s);
+    location.reload();
+  },
+};
+
+function flash(msg: string): void {
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-success';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 1500);
+}
+
 ui.subscribe(renderScreens);
+
+// ============================================================================
+// Auto-save
+// ============================================================================
+
+let lastAutoSaveAt = 0;
+function maybeAutoSave(): void {
+  if (!settings.autoSave) return;
+  const now = Date.now();
+  if (now - lastAutoSaveAt < settings.autoSaveIntervalMs) return;
+  lastAutoSaveAt = now;
+  try {
+    saveGame('autosave', player, world, currentPresetId);
+  } catch (e) {
+    // ignore quota errors silently — they surface via the Settings panel
+  }
+}
 
 // ============================================================================
 // Game loop — fixed tick + interpolation render
@@ -215,6 +285,7 @@ function loop(now: number): void {
     if (pendingEvents.length > 120) {
       pendingEvents = pendingEvents.slice(-120);
     }
+    maybeAutoSave();
   } else {
     accumulator = 0;
   }

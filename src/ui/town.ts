@@ -57,6 +57,24 @@ export function renderTown(root: HTMLElement, ui: Ui): void {
     !jobChange.ok,
   ));
 
+  // Refine NPC
+  grid.appendChild(npcCard('⚒', 'Blacksmith',
+    'Upgrade weapons and armor.',
+    () => ui.go('refine'),
+  ));
+
+  // Card socketing NPC
+  grid.appendChild(npcCard('🃏', 'Card Master',
+    'Socket cards into equipment.',
+    () => ui.go('cards'),
+  ));
+
+  // Settings / Saves
+  grid.appendChild(npcCard('⚙', 'Settings',
+    'Save / load / reset.',
+    () => ui.go('settings'),
+  ));
+
   overlay.appendChild(grid);
 
   overlay.appendChild(el('div', { class: 'actions' }, [

@@ -9,6 +9,7 @@ export default defineConfig({
       '@data': fileURLToPath(new URL('./src/data', import.meta.url)),
       '@render': fileURLToPath(new URL('./src/render', import.meta.url)),
       '@ai': fileURLToPath(new URL('./src/ai', import.meta.url)),
+      '@persistence': fileURLToPath(new URL('./src/persistence', import.meta.url)),
     },
   },
   plugins: [

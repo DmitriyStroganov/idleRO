@@ -23,7 +23,8 @@
       "@engine/*": ["src/engine/*"],
       "@data/*": ["src/data/*"],
       "@render/*": ["src/render/*"],
-      "@ai/*": ["src/ai/*"]
+      "@ai/*": ["src/ai/*"],
+      "@persistence/*": ["src/persistence/*"]
     },
     "types": ["vite/client", "node"]
   },
