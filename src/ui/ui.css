@@ -1,0 +1,492 @@
+/* UI panels — overlay on top of the canvas. Mobile-first. */
+
+#ui-layer {
+  position: fixed;
+  inset: 0;
+  display: none;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 10;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#ui-layer.active {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px;
+}
+
+.panel {
+  background: linear-gradient(180deg, #1d2b3a 0%, #15202b 100%);
+  border: 1px solid #2c3e50;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 720px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  font-size: 14px;
+  margin-bottom: 40px;
+}
+
+.panel h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0 0 16px 0;
+  color: #95a5a6;
+  font-size: 13px;
+}
+
+/* Buttons */
+.ui-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ddd;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+}
+
+.ui-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ui-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.ui-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ui-btn-primary {
+  background: #2d5a8a;
+  border-color: #4a90e2;
+  color: #fff;
+}
+
+.ui-btn-primary:hover:not(:disabled) {
+  background: #3a6ba0;
+}
+
+.ui-btn-plus {
+  padding: 6px 10px;
+  background: #4a7c3a;
+  border-color: #6ba85a;
+  color: #fff;
+  font-weight: 600;
+  min-width: 50px;
+}
+
+.ui-btn-plus:disabled {
+  background: #333;
+  border-color: #444;
+}
+
+.ui-btn-tiny {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Town */
+.town .npc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.npc-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font: inherit;
+  color: inherit;
+}
+
+.npc-card:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: #4a90e2;
+}
+
+.npc-card:disabled,
+.npc-card-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.npc-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.npc-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.npc-desc {
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+/* Top bar with Town button */
+#top-bar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  pointer-events: auto;
+}
+
+/* Stats panel */
+.stats-body {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .stats-body { grid-template-columns: 1fr; }
+}
+
+.stats-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label plus'
+    'desc plus'
+    'values plus';
+  gap: 2px 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  align-items: center;
+}
+
+.stat-label {
+  grid-area: label;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.stat-full-name {
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+.stat-desc {
+  grid-area: desc;
+  font-size: 11px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.stat-values {
+  grid-area: values;
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-base { color: #fff; font-weight: 600; }
+.stat-equip { color: #6ba85a; }
+.stat-buff { color: #4a90e2; }
+.stat-total { color: #f1c40f; }
+
+.stat-row .ui-btn-plus {
+  grid-area: plus;
+  align-self: center;
+}
+
+.stats-derived {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 12px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.derived-row {
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Skills */
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skill-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'name plus'
+    'meta plus'
+    'pips plus'
+    'prereq plus';
+  gap: 4px 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  align-items: center;
+}
+
+.skill-known {
+  background: rgba(74, 144, 226, 0.08);
+  border-left: 3px solid #4a90e2;
+}
+
+.skill-maxed {
+  background: rgba(74, 124, 58, 0.12);
+  border-left: 3px solid #6ba85a;
+}
+
+.skill-name {
+  grid-area: name;
+  font-weight: 600;
+}
+
+.skill-meta {
+  grid-area: meta;
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+.skill-dmg {
+  color: #e67e22;
+}
+
+.pips {
+  grid-area: pips;
+  display: flex;
+  gap: 3px;
+}
+
+.pip {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pip-filled {
+  background: #f1c40f;
+  border-color: #f39c12;
+}
+
+.skill-prereq {
+  grid-area: prereq;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.prereq-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.prereq-ok {
+  color: #6ba85a;
+  border-color: #6ba85a;
+}
+
+.prereq-missing {
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.skill-row .ui-btn-plus {
+  grid-area: plus;
+  align-self: center;
+}
+
+/* Inventory */
+.inv-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .inv-body { grid-template-columns: 1fr; }
+}
+
+.paper-doll {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.doll-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 8px;
+}
+
+.doll-label {
+  font-size: 12px;
+  color: #95a5a6;
+  min-width: 90px;
+}
+
+.doll-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.doll-name {
+  font-size: 13px;
+}
+
+.doll-empty {
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.inv-list {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px;
+  border-radius: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.inv-empty {
+  text-align: center;
+  color: #7f8c8d;
+  padding: 20px;
+  font-style: italic;
+}
+
+.inv-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 6px 8px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.inv-name {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.inv-icon {
+  font-size: 16px;
+}
+
+.inv-stats {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+/* Class change */
+.class-target {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 16px;
+  border-radius: 6px;
+  margin: 12px 0;
+}
+
+.class-arrow {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.class-req {
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+.info-box {
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.info-success {
+  background: rgba(107, 168, 90, 0.15);
+  border: 1px solid #6ba85a;
+}
+
+.info-warning {
+  background: rgba(231, 126, 60, 0.15);
+  border: 1px solid #e67e22;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 1000;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  animation: toast-in 0.15s ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
