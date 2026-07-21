@@ -75,6 +75,7 @@ const WEAPON_PALETTE: Record<string, string> = {
   Sprite_Weapon_Bow_Gakkung: '#5a3a1a',
   Sprite_Weapon_Bow_Hunter: '#3a5a3a',
   Sprite_Weapon_Bow_Rogue: '#2a3a5a',
+  Sprite_Weapon_Knife: '#cccccc',
 };
 
 const ARMOR_PALETTE: Record<string, string> = {

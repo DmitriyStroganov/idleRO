@@ -567,11 +567,24 @@ export interface Character extends Entity {
   ammunition?: { itemId: ItemId; count: number };
 
   /**
+   * Behaviour descriptor — what drives the character's AI. Either:
+   *   - a Level 1 preset id, OR
+   *   - a Level 2 priority-list config (full rules)
+   * If undefined, the loader defaults to `{ kind: 'preset', presetId: 'aggressive' }`.
+   */
+  behavior?: CharacterBehavior;
+
+  /**
    * Composite-sprite appearance descriptor. Recomputed whenever the player
    * changes equipment, hair style, or dye color.
    */
   appearance: Appearance;
 }
+
+/** Discriminated union for the behaviour driving a character's AI. */
+export type CharacterBehavior =
+  | { kind: 'preset'; presetId: string }
+  | { kind: 'priorityList'; config: import('../ai/priority-list').PriorityListConfig };
 
 export interface Monster extends Entity {
   kind: 'monster';

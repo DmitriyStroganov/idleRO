@@ -14,6 +14,12 @@ import type { CardDef, CardId, ItemDef, ItemId } from '@engine/types';
 
 export const ITEMS: Record<ItemId, ItemDef> = {
   // === Bows ===
+  Item_Weapon_NoviceKnife: {
+    id: 'Item_Weapon_NoviceKnife', name: 'Novice Knife',
+    type: 'weapon', weaponLevel: 1, weaponType: 'Dagger',
+    attack: 10, slots: 0, refineable: false, weight: 20,
+    spriteKey: 'Sprite_Weapon_Knife',
+  },
   Item_Weapon_NoviceBow: {
     id: 'Item_Weapon_NoviceBow', name: 'Novice Bow',
     type: 'weapon', weaponLevel: 1, weaponType: 'Bow',

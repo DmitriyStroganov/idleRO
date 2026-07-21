@@ -17,6 +17,7 @@ export type ScreenId =
   | 'classchange'   // class-change NPC
   | 'refine'        // blacksmith NPC
   | 'cards'         // card socketing NPC
+  | 'ai'            // behaviour editor (AI Level 2)
   | 'settings'      // save/load
   | 'battlelog';
 

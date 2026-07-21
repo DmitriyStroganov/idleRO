@@ -69,6 +69,13 @@ export function renderTown(root: HTMLElement, ui: Ui): void {
     () => ui.go('cards'),
   ));
 
+  // Behaviour editor (AI Level 2)
+  const behaviorKind = player.behavior?.kind === 'priorityList' ? 'Custom rules' : 'Preset';
+  grid.appendChild(npcCard('🧠', 'Behaviour Editor',
+    `Current: ${behaviorKind}. Edit rules, conditions, actions.`,
+    () => ui.go('ai'),
+  ));
+
   // Settings / Saves
   grid.appendChild(npcCard('⚙', 'Settings',
     'Save / load / reset.',
