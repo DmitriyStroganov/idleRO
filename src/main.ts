@@ -147,6 +147,8 @@ function startGame(): void {
             targetUid: ev.targetUid,
             damage: ev.damage,
             isCrit: ev.isCrit,
+            whoUid: ev.whoUid,
+            newLevel: ev.newLevel,
             tick: msg.tick,
           });
         }
@@ -165,7 +167,7 @@ function startGame(): void {
 // HUD (top-right Town button + preset bar)
 // ============================================================================
 
-const eventBuffer: { kind: string; attackerUid?: string; targetUid?: string; damage?: number; isCrit?: boolean; tick: number }[] = [];
+const eventBuffer: { kind: string; attackerUid?: string; targetUid?: string; damage?: number; isCrit?: boolean; whoUid?: string; newLevel?: number; tick: number }[] = [];
 
 function renderHud(): void {
   hud.innerHTML = `
