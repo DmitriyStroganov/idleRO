@@ -118,19 +118,29 @@ function showLogin(): void {
 
 function startGame(): void {
   ws.onMessage((msg) => {
+    // Verbose logging for debugging — remove or gate behind a flag later.
     switch (msg.type) {
       case 'hello':
+        console.log('[WS] hello:', msg.user);
         store.setUser({ id: msg.user.id, username: msg.user.username });
         break;
       case 'state':
+        console.log('[WS] state:', {
+          job: msg.character.jobId,
+          lv: msg.character.baseLevel,
+          hp: msg.character.hp,
+          maxHp: msg.character.maxHp,
+          pos: msg.character.position.x.toFixed(1),
+          anim: msg.character.sprite.animation,
+          monsters: msg.world.monsters.filter((m) => m.hp > 0).length,
+        });
         store.setState(msg.character, msg.world);
         if (!ui) {
           ui = ensureUi(msg.character);
           ui.subscribe((s) => renderScreens(s.screen));
           renderHud();
         } else {
-          // Swap the player reference the Ui exposes.
-          (ui as unknown as { player: Character }).player = msg.character;
+          (ui as unknown as { player: typeof msg.character }).player = msg.character;
         }
         break;
       case 'paused':
@@ -145,11 +155,10 @@ function startGame(): void {
         }
         break;
       case 'offline_applied':
-        // Silent — log for debugging. UI requirement was "no popup".
-        console.log('[offline] applied:', msg.result);
+        console.log('[WS] offline_applied:', msg.result);
         break;
       case 'command_ack':
-        if (!msg.ok) console.warn('command failed', msg.error);
+        if (!msg.ok) console.warn('[WS] command failed:', msg.error);
         break;
       case 'events':
         // Forward to renderer for floating damage numbers etc.
@@ -167,7 +176,7 @@ function startGame(): void {
         }
         break;
       case 'error':
-        console.warn('server error', msg.error);
+        console.warn('[WS] server error:', msg.error, msg.kind ?? '');
         break;
     }
   });
