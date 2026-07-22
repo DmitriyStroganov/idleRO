@@ -25,6 +25,7 @@ import { renderClassChange } from './ui/classchange-panel';
 import { renderRefine } from './ui/refine-panel';
 import { renderCardSocket } from './ui/card-panel';
 import { renderAiEditor, type AiEditorActions } from './ui/ai-editor';
+import { showOfflineScreen } from './ui/offline-screen';
 import { WsClient } from './net/ws-client';
 import { loadAuthState, logout as authLogout, type AuthState } from './net/auth';
 import { store } from './state/store';
@@ -79,7 +80,7 @@ function renderScreens(screen: string): void {
   uiLayer.classList.add('active');
   const currentUi = ui!;
   switch (screen) {
-    case 'town':        renderTown(uiLayer, currentUi); break;
+    case 'town':        renderTown(uiLayer, currentUi, ws); break;
     case 'stats':       renderStats(uiLayer, currentUi); break;
     case 'skills':      renderSkills(uiLayer, currentUi); break;
     case 'inventory':   renderInventory(uiLayer, currentUi); break;
@@ -134,6 +135,18 @@ function startGame(): void {
         break;
       case 'paused':
         store.setPaused(msg.paused);
+        break;
+      case 'offline_mode':
+        // Server confirmed go_offline — display the offline screen and
+        // stop further rendering. Player will need to log back in.
+        if (msg.mode) {
+          store.setUser(null);
+          showOfflineScreen();
+        }
+        break;
+      case 'offline_applied':
+        // Silent — log for debugging. UI requirement was "no popup".
+        console.log('[offline] applied:', msg.result);
         break;
       case 'command_ack':
         if (!msg.ok) console.warn('command failed', msg.error);

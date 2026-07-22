@@ -14,8 +14,9 @@
 import type { Ui } from './state';
 import { el, clear, button } from './dom';
 import { canChangeJob } from '@engine/character-ops';
+import type { WsClient } from '../net/ws-client';
 
-export function renderTown(root: HTMLElement, ui: Ui): void {
+export function renderTown(root: HTMLElement, ui: Ui, ws: WsClient): void {
   clear(root);
   const { player } = ui.state;
 
@@ -80,6 +81,21 @@ export function renderTown(root: HTMLElement, ui: Ui): void {
   grid.appendChild(npcCard('⚙', 'Settings',
     'Save / load / reset.',
     () => ui.go('settings'),
+  ));
+
+  // Go Offline — disconnect with offline-progression enabled
+  grid.appendChild(npcCard('🛌', 'Go Offline',
+    'Continue gaining EXP at your recent rate while away (up to 8h).',
+    () => {
+      if (confirm(
+        'Go offline?\n\n' +
+        'Your character will keep gaining EXP at your recent online rate ' +
+        'while you are away (capped at 8 hours).\n\n' +
+        'You won\'t be able to play until you log back in.'
+      )) {
+        ws.sendCommand({ kind: 'go_offline' });
+      }
+    },
   ));
 
   overlay.appendChild(grid);

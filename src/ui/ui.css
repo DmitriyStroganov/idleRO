@@ -842,3 +842,35 @@
   outline: none;
   border-color: #4a90e2;
 }
+
+/* Offline screen */
+.offline-panel {
+  text-align: center;
+  max-width: 480px;
+}
+
+.offline-moon {
+  font-size: 96px;
+  margin-bottom: 16px;
+  animation: moon-float 4s ease-in-out infinite;
+}
+
+@keyframes moon-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.offline-panel h2 {
+  margin-bottom: 12px;
+}
+
+.offline-panel .subtitle {
+  text-align: center;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.offline-panel .actions {
+  justify-content: center;
+  margin-top: 24px;
+}
