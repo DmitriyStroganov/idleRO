@@ -21,11 +21,12 @@ const ASSET_BASE = 'https://assets.latam-tools.com.br';
 
 /** Engine SpriteKey → ragassets job id (for monsters). */
 const MONSTER_JOB_MAP: Record<string, number> = {
-  Sprite_Lunatic: 1063,
-  Sprite_Spore:   1014,
-  Sprite_Wolf:    1013,
-  Sprite_Savage:  1116,
-  Sprite_Eddga:   1115,
+  Sprite_Poring:   1002,   // classic pink squish
+  Sprite_Lunatic:  1063,
+  Sprite_Spore:    1014,
+  Sprite_Wolf:     1013,
+  Sprite_Savage:   1116,
+  Sprite_Eddga:    1115,
 };
 
 /** Engine body-layer key → ragassets job id (for player classes). */
