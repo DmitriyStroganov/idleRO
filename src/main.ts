@@ -6,6 +6,7 @@
 
 import './style.css';
 import { RoRenderer } from './ro/renderer';
+import { registry } from './ro/registry';
 
 // ============================================================================
 // Boot
@@ -95,33 +96,131 @@ const noviceRenderer = new RoRenderer();
 const poringRenderer = new RoRenderer();
 let loaded = false;
 
+// Equipment state
+const WEAPON_KEYS = ['dagger', 'sword', 'axe', 'mace', 'rod'];
+let weaponIdx = 0;
+let shieldOn = false;
+const HEADGEAR_TOP = [null, 'santa_hat'];
+const HEADGEAR_MID = [null, 'glasses'];
+const HEADGEAR_LOW = [null, 'gas_mask'];
+let hgTopIdx = 0, hgMidIdx = 0, hgLowIdx = 0;
+
 async function loadSprites(): Promise<void> {
-  const base = 'sprites/raw';
-
-  // Load novice body + head + weapon (dagger)
-  const [bodySpr, bodyAct, headSpr, headAct, wSpr, wAct] = await Promise.all([
-    fetch(`${base}/body/novice_male.spr`).then(r => r.arrayBuffer()),
-    fetch(`${base}/body/novice_male.act`).then(r => r.arrayBuffer()),
-    fetch(`${base}/head/head2_male.spr`).then(r => r.arrayBuffer()),
-    fetch(`${base}/head/head2_male.act`).then(r => r.arrayBuffer()),
-    fetch(`${base}/weapon/dagger.spr`).then(r => r.arrayBuffer()),
-    fetch(`${base}/weapon/dagger.act`).then(r => r.arrayBuffer()),
+  // Load core sprites via registry (cached)
+  const [body, head, weapon] = await Promise.all([
+    registry.fetch('body/novice_male'),
+    registry.fetch('head/head2_male'),
+    registry.fetch(`weapon/novice_${WEAPON_KEYS[weaponIdx]}`),
   ]);
-  noviceRenderer.loadLayer('body', bodySpr, bodyAct);
-  noviceRenderer.loadLayer('head', headSpr, headAct);
-  noviceRenderer.loadLayer('weapon', wSpr, wAct);
+  noviceRenderer.loadLayer('body', body.spr, body.act);
+  noviceRenderer.loadLayer('head', head.spr, head.act);
+  noviceRenderer.loadLayer('weapon', weapon.spr, weapon.act);
 
-  // Load poring
-  const [pSpr, pAct] = await Promise.all([
-    fetch(`${base}/poring/poring.spr`).then(r => r.arrayBuffer()),
-    fetch(`${base}/poring/poring.act`).then(r => r.arrayBuffer()),
-  ]);
-  poringRenderer.loadLayer('body', pSpr, pAct);
+  const poring = await registry.fetch('mob/poring');
+  poringRenderer.loadLayer('body', poring.spr, poring.act);
 
   loaded = true;
   console.log('Sprites loaded ✓');
 }
 loadSprites().catch(err => console.error('Sprite load failed:', err));
+
+// ============================================================================
+// Equipment switching via registry (lazy-load + cache)
+// ============================================================================
+
+async function equipWeapon(key: string): Promise<void> {
+  const data = await registry.fetch(`weapon/novice_${key}`);
+  noviceRenderer.unloadLayer('weapon');
+  noviceRenderer.loadLayer('weapon', data.spr, data.act);
+}
+
+async function toggleShield(on: boolean): Promise<void> {
+  if (on) {
+    const data = await registry.fetch('shield/guard');
+    noviceRenderer.loadLayer('shield', data.spr, data.act);
+  } else {
+    noviceRenderer.unloadLayer('shield');
+  }
+}
+
+async function setHeadgear(slot: 'top' | 'mid' | 'low', key: string | null): Promise<void> {
+  const layerKey = `headgear-${slot}`;
+  noviceRenderer.unloadLayer(layerKey);
+  if (key) {
+    const data = await registry.fetch(`headgear/${key}`);
+    noviceRenderer.loadLayer(layerKey, data.spr, data.act);
+  }
+}
+
+// ============================================================================
+// Test buttons
+// ============================================================================
+
+function makeBtn(label: string, onClick: () => void): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.style.cssText = 'position:fixed;z-index:100;font:12px monospace;padding:5px 10px;background:rgba(0,0,0,0.7);color:#fff;border:1px solid #4a90e2;border-radius:6px;cursor:pointer;';
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+// Weapon cycle button
+const weaponBtn = makeBtn(`⚔ ${WEAPON_KEYS[weaponIdx]}`, async () => {
+  weaponIdx = (weaponIdx + 1) % WEAPON_KEYS.length;
+  weaponBtn.textContent = `⚔ ${WEAPON_KEYS[weaponIdx]}...`;
+  await equipWeapon(WEAPON_KEYS[weaponIdx]!);
+  weaponBtn.textContent = `⚔ ${WEAPON_KEYS[weaponIdx]}`;
+});
+weaponBtn.style.top = '12px';
+weaponBtn.style.right = '12px';
+document.body.appendChild(weaponBtn);
+
+// Shield toggle button
+const shieldBtn = makeBtn('🛡 off', async () => {
+  shieldOn = !shieldOn;
+  shieldBtn.textContent = `🛡 ${shieldOn ? 'on...' : 'off'}`;
+  await toggleShield(shieldOn);
+  shieldBtn.textContent = `🛡 ${shieldOn ? 'on' : 'off'}`;
+});
+shieldBtn.style.top = '44px';
+shieldBtn.style.right = '12px';
+document.body.appendChild(shieldBtn);
+
+// Headgear top button
+const hgTopBtn = makeBtn(`🎩 top: ${HEADGEAR_TOP[hgTopIdx] ?? 'none'}`, async () => {
+  hgTopIdx = (hgTopIdx + 1) % HEADGEAR_TOP.length;
+  const key = HEADGEAR_TOP[hgTopIdx];
+  hgTopBtn.textContent = `🎩 top: ${key ?? 'none'}...`;
+  await setHeadgear('top', key);
+  hgTopBtn.textContent = `🎩 top: ${key ?? 'none'}`;
+});
+hgTopBtn.style.top = '76px';
+hgTopBtn.style.right = '12px';
+document.body.appendChild(hgTopBtn);
+
+// Headgear mid button
+const hgMidBtn = makeBtn(`👓 mid: ${HEADGEAR_MID[hgMidIdx] ?? 'none'}`, async () => {
+  hgMidIdx = (hgMidIdx + 1) % HEADGEAR_MID.length;
+  const key = HEADGEAR_MID[hgMidIdx];
+  hgMidBtn.textContent = `👓 mid: ${key ?? 'none'}...`;
+  await setHeadgear('mid', key);
+  hgMidBtn.textContent = `👓 mid: ${key ?? 'none'}`;
+});
+hgMidBtn.style.top = '108px';
+hgMidBtn.style.right = '12px';
+document.body.appendChild(hgMidBtn);
+
+// Headgear low button
+const hgLowBtn = makeBtn(`😷 low: ${HEADGEAR_LOW[hgLowIdx] ?? 'none'}`, async () => {
+  hgLowIdx = (hgLowIdx + 1) % HEADGEAR_LOW.length;
+  const key = HEADGEAR_LOW[hgLowIdx];
+  hgLowBtn.textContent = `😷 low: ${key ?? 'none'}...`;
+  await setHeadgear('low', key);
+  hgLowBtn.textContent = `😷 low: ${key ?? 'none'}`;
+});
+hgLowBtn.style.top = '140px';
+hgLowBtn.style.right = '12px';
+document.body.appendChild(hgLowBtn);
 
 // ============================================================================
 // Game State

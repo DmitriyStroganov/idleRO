@@ -106,9 +106,11 @@ export class RoRenderer {
     }
     const entries: DrawEntry[] = [];
 
-    // Priority: body=10, head=15, weapon=25, shield=30 (for East direction)
+    // Priority: body=10, head=15, weapon=25, shield=30, headgear-top=18,
+    // headgear-mid=17, headgear-low=16 (for East direction)
     const priorities: Record<string, number> = {
-      body: 10, weapon: 25, head: 15, shield: 30, headgear: 20,
+      body: 10, head: 15, weapon: 25, shield: 30,
+      'headgear-top': 18, 'headgear-mid': 17, 'headgear-low': 16,
     };
 
     // Get body attach points for head positioning.
@@ -158,9 +160,9 @@ export class RoRenderer {
         const canvas = canvases.get(cacheKey);
         if (!canvas || canvas.width === 0) continue;
 
-        // Head uses body's attach point as its position offset
+        // Head and headgear layers use head attach point as position offset
         let extraX = 0, extraY = 0;
-        if (key === 'head') {
+        if (key === 'head' || key.startsWith('headgear')) {
           extraX = headOffsetX;
           extraY = headOffsetY;
         }
@@ -281,7 +283,7 @@ export class RoRenderer {
       const actFrame = actAction.frames[frame]!;
 
       let extraY = 0;
-      if (key === 'head') extraY = headOffsetY;
+      if (key === 'head' || key.startsWith('headgear')) extraY = headOffsetY;
 
       for (const layer of actFrame.layers) {
         if (layer.index < 0) continue;
