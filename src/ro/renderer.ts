@@ -38,6 +38,33 @@ export class RoRenderer {
   }
 
   /**
+   * Find the first attack action (40-103) where this layer has
+   * non-empty sprite layers (sprId >= 0) for direction 6 (East).
+   * Returns the action index, or -1 if none found.
+   */
+  findWeaponAttackAction(layerKey: string): number {
+    const layerData = this.layers.get(layerKey);
+    if (!layerData) return -1;
+    const { act } = layerData;
+
+    // Attack variants: 40-47 (standard), 80-87 (var1), 88-95 (var2), 96-103 (var3)
+    // Direction East = +6
+    for (const baseAction of [40, 80, 88, 96]) {
+      const action = baseAction + 6; // East direction
+      if (action >= act.actions.length) continue;
+      const actAction = act.actions[action];
+      if (!actAction) continue;
+      // Check frame 0 — if any layer has sprId >= 0, this action works
+      const frame = actAction.frames[0];
+      if (!frame) continue;
+      for (const layer of frame.layers) {
+        if (layer.index >= 0) return action;
+      }
+    }
+    return -1;
+  }
+
+  /**
    * Pre-render each sprite frame to an offscreen canvas.
    * Key: "{action}:{frame}:{layerIndex}"
    */

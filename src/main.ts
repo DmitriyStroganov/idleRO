@@ -52,8 +52,8 @@ const SPRITE_Y_OFFSET = 40;
 // direction 6 = East (facing right)
 const ACT_WALK      = 14;   // 1*8+6
 const ACT_STANDBY   = 38;   // 4*8+6
-const ACT_ATK_DAG   = 86;   // 10*8+6 (attack variant 1)
 const ACT_DEAD      = 70;   // 8*8+6
+let playerAttackAction = 86; // will be updated when weapon changes
 
 // Poring actions (direction 6):
 const P_ACT_IDLE   = 6;
@@ -115,6 +115,9 @@ async function loadSprites(): Promise<void> {
   noviceRenderer.loadLayer('body', body.spr, body.act);
   noviceRenderer.loadLayer('head', head.spr, head.act);
   noviceRenderer.loadLayer('weapon', weapon.spr, weapon.act);
+  // Detect attack action for starter weapon
+  const detected = noviceRenderer.findWeaponAttackAction('weapon');
+  playerAttackAction = detected > 0 ? detected : 86;
 
   const poring = await registry.fetch('mob/poring');
   poringRenderer.loadLayer('body', poring.spr, poring.act);
@@ -132,6 +135,10 @@ async function equipWeapon(key: string): Promise<void> {
   const data = await registry.fetch(`weapon/novice_${key}`);
   noviceRenderer.unloadLayer('weapon');
   noviceRenderer.loadLayer('weapon', data.spr, data.act);
+  // Auto-detect which attack variant has visible weapon sprites
+  const detected = noviceRenderer.findWeaponAttackAction('weapon');
+  playerAttackAction = detected > 0 ? detected : 86;
+  console.log(`Weapon ${key}: attack action = ${playerAttackAction}`);
 }
 
 async function toggleShield(on: boolean): Promise<void> {
@@ -291,7 +298,7 @@ function update(dt: number, now: number): void {
     }
     case 'fighting': {
       if (!player.dead && now >= player.nextAttackAt) {
-        playerAnimAction = ACT_ATK_DAG;
+        playerAnimAction = playerAttackAction;
         mob.hp -= player.atk + Math.floor(Math.random() * 3);
         player.nextAttackAt = now + PLAYER_ATTACK_MS / speedMul;
         setTimeout(() => { if (phase === 'fighting' && !player.dead) playerAnimAction = ACT_STANDBY; }, 200 / speedMul);
